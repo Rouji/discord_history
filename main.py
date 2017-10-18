@@ -35,6 +35,7 @@ def get_history():
     bridge_bots = config.get("bridge_bots", {})
 
     os.makedirs("logs", exist_ok=True)
+
     client = discord.Client()
 
     @client.event
