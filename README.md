@@ -1,6 +1,6 @@
 # Discord History Downloader
 
-This script downloads Discord chat history and saves it in a nice text format.
+This script downloads Discord chat history and saves it in a nice text format. The primary use case is to save history from selected important channels to be able to access and search it locally. **Requires Python 3.6+**.
 
 ## Installation
 
@@ -53,9 +53,10 @@ It should create `logs` directory and populate it with logs.
 
 1. The script downloads all history from all servers in memory and only then dumps it on disk. That can be quite memory intensive.
 2. There's currently no way to precisely scope what channels to download chat history from, you can only list servers and it will download history from all channels on those servers.
-3. Multi-line messages don't look very nice in the result log file.
-4. There's a hard limit of 10 million messages per channel, would be nice to move it to config file.
-5. Bridged bots configuration is global, so if there are two different bots with same name, one of them won't work.
-6. When the script finishes, it produces `RuntimeError: Event loop stopped before Future completed`.
+3. It doesn't remember what was already downloaded, so it will start from scratch every time.
+4. Multi-line messages don't look very nice in the result log file.
+5. There's a hardcoded limit of 10 million messages per channel, would be nice to move it to config file and make it optional.
+6. Bridged bots configuration is global, so if there are two different bots with same name, one of them won't work.
+7. When the script finishes, it produces `RuntimeError: Event loop stopped before Future completed`.
 
 PRs welcome.
