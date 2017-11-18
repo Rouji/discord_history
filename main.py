@@ -65,8 +65,10 @@ def get_history():
                 cid = "%s.%s" % (server.name, channel.name)
                 await download_channel(channel, cid)
 
+        client.loop.call_soon(stop)
 
-        client.loop.call_later(1, client.loop.stop)
+    def stop():
+        raise KeyboardInterrupt()
 
     client.run(token, bot=False)
 
