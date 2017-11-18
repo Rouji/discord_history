@@ -10,7 +10,7 @@ import discord
 def format_message(message, bridge_bots):
     content = message.clean_content
     for obj in message.embeds + message.attachments:
-        if obj["url"] not in content:
+        if "url" in obj and obj["url"] not in content:
             content += "\n%s" % obj["url"]
 
     user = message.author.name
@@ -22,7 +22,9 @@ def format_message(message, bridge_bots):
             user = match.group("user") + bridge_bots[user].get("suffix", "")
             content = match.group("content")
 
-    return "[%s] <%s> %s\n" % (message.timestamp.strftime("%Y-%m-%d %H:%M:%S"), user, content)
+    timestamp = message.timestamp.strftime("%Y-%m-%d %H:%M:%S")
+    return "\n".join("[%s] <%s> %s" % (timestamp, user, line)
+                     for line in content.splitlines()) + "\n"
 
 
 def get_history():
