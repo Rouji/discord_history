@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
 
-import collections
 import json
 import os
 import re
@@ -38,15 +37,25 @@ def get_history():
 
     client = discord.Client()
 
+    async def download_channel(channel, cid):
+        messages = []
+        print("Fetching %s" % cid)
+        async for message in client.logs_from(channel, limit=10000000):
+            messages.append(message)
+
+        if not messages:
+            return
+
+        messages.sort(key=lambda x: x.timestamp)
+        with open("logs/%s.txt" % cid, "w") as f:
+            for message in messages:
+                f.write(format_message(message, bridge_bots))
+
     @client.event
     async def on_ready():
-        history = collections.defaultdict(list)
-
         for channel in client.private_channels:
             cid = "private.%s" % "_".join([x.name for x in channel.recipients])
-            print("Fetching %s" % cid)
-            async for message in client.logs_from(channel, limit=10000000):
-                history[cid].append(message)
+            await download_channel(channel, cid)
 
         for server in client.servers:
             if servers and server.name not in servers:
@@ -54,15 +63,8 @@ def get_history():
 
             for channel in server.channels:
                 cid = "%s.%s" % (server.name, channel.name)
-                print("Fetching %s" % cid)
-                async for message in client.logs_from(channel, limit=10000000):
-                    history[cid].append(message)
+                await download_channel(channel, cid)
 
-        for channel, messages in history.items():
-            messages.sort(key=lambda x: x.timestamp)
-            with open("logs/%s.txt" % channel, "w") as f:
-                for message in messages:
-                    f.write(format_message(message, bridge_bots))
 
         client.loop.call_later(1, client.loop.stop)
 

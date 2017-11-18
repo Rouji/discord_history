@@ -51,7 +51,7 @@ It should create `logs` directory and populate it with logs.
 
 ## Known problems
 
-1. The script downloads all history from all servers in memory and only then dumps it on disk. That can be quite memory intensive.
+1. The script downloads all history from a channel and only then dumps it on disk. That can be memory intensive.
 2. There's currently no way to precisely scope what channels to download chat history from, you can only list servers and it will download history from all channels on those servers.
 3. It doesn't remember what was already downloaded, so it will start from scratch every time.
 4. Multi-line messages don't look very nice in the result log file.
