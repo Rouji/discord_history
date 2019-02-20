@@ -1,79 +1,71 @@
 #!/usr/bin/env python3
 
+from sys import stderr, exit
 import json
-import os
 import re
 
+from asyncio import CancelledError
 import discord
+from entrypoint2 import entrypoint
 
 
-def format_message(message, bridge_bots):
+def format_message(message, server_name, channel_name):
     content = message.clean_content
     for obj in message.embeds + message.attachments:
-        if "url" in obj and obj["url"] not in content:
-            content += "\n%s" % obj["url"]
+        if 'url' in obj and obj['url'] not in content:
+            content += '\n' + obj['url']
 
-    user = message.author.name
-    content = content.strip()
-
-    if user in bridge_bots:
-        match = re.match(bridge_bots[user]["regex"], content)
-        if match:
-            user = match.group("user") + bridge_bots[user].get("suffix", "")
-            content = match.group("content")
-
-    timestamp = message.timestamp.strftime("%Y-%m-%d %H:%M:%S")
-    return "\n".join("[%s] <%s> %s" % (timestamp, user, line)
-                     for line in content.splitlines()) + "\n"
+    return json.dumps(
+        {
+            'timestamp': message.timestamp.strftime('%Y-%m-%d %H:%M:%S'),
+            'server': server_name,
+            'channel': channel_name,
+            'user': message.author.name,
+            'message': content.strip(),
+        }
+    )
 
 
-def get_history():
-    with open("config.json") as f:
-        config = json.load(f)
+@entrypoint
+def main(token, server=[], channel=[], max_messages_per_channel=10000000):
+    '''Download discord chat history as (streamed) json
+    token: Your discord token
+    server: Python regex(es) matching server names to be included. If none specified, all servers will be downloaded. PMs are assigned the server name "__private".
+    channel: Python regex(es) matching channel names to be included. If none specified, all channels will be downloaded.
+    max_messages_per_channel: Maximum number of messages to get per channel.
+    '''
 
-    token = config["token"]
-    servers = config.get("servers")
-    bridge_bots = config.get("bridge_bots", {})
-
-    os.makedirs("logs", exist_ok=True)
+    server_re = [re.compile(s) for s in server]
+    channel_re = [re.compile(c) for c in channel]
 
     client = discord.Client()
 
-    async def download_channel(channel, cid):
-        messages = []
-        print("Fetching %s" % cid)
-        async for message in client.logs_from(channel, limit=10000000):
-            messages.append(message)
-
-        if not messages:
-            return
-
-        messages.sort(key=lambda x: x.timestamp)
-        with open("logs/%s.txt" % cid, "w") as f:
-            for message in messages:
-                f.write(format_message(message, bridge_bots))
+    async def download_channel(channel, server_name, channel_name):
+        try:
+            messages = []
+            async for msg in client.logs_from(channel, limit=max_messages_per_channel):
+                print(format_message(msg, server_name, channel_name))
+        except RuntimeError:
+            pass
+        except Exception as ex:
+            print(
+                'Caught {} while processing channel {}'.format(repr(ex), channel_name), file=stderr
+            )
 
     @client.event
     async def on_ready():
-        for channel in client.private_channels:
-            cid = "private.%s" % "_".join([x.name for x in channel.recipients])
-            await download_channel(channel, cid)
-
+        channels = [
+            (c, '_private', '_'.join(sorted([x.name for x in c.recipients])))
+            for c in client.private_channels
+        ]
         for server in client.servers:
-            if servers and server.name not in servers:
+            if server_re and [0 for re in server_re if re.match(server.name)]:
                 continue
+            channels += [(c, server.name, c.name) for c in server.channels]
 
-            for channel in server.channels:
-                cid = "%s.%s" % (server.name, channel.name)
-                await download_channel(channel, cid)
+        for c in channels:
+            await download_channel(*c)
 
-        client.loop.call_soon(stop)
-
-    def stop():
-        raise KeyboardInterrupt()
+        client.loop.call_soon(exit)
 
     client.run(token, bot=False)
-
-
-if __name__ == "__main__":
-    get_history()

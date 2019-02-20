@@ -1,60 +1,36 @@
 # Discord History Downloader
-
-This script downloads Discord chat history and saves it in a nice text format. The primary use case is to save history from selected important channels to be able to access and search it locally. **Requires Python 3.6+**.
+This script downloads Discord chat history and outputs it as JSON. The primary use case is to save history from selected important channels to be able to access and search it locally. **Requires Python 3.6+**.
 
 ## Installation
-
-There's no installation procedure per se, but this script requires discord.py library. To install it, run
-
 ```
 $ pip3 install -r requirements.txt
 ```
 
-## Config file
-
-Config file is a JSON file with the following format:
-
-```
-{
-    "token": "YOUR_TOKEN",
-    "servers": [],
-    "bridge_bots": {
-        "bot_name": {
-            "regex": "^\\*\\*<(?P<user>.*)>\\*\\* (?P<content>.*)$",
-            "suffix": ""
-        }
-    }
-}
-```
-
-1. `token` (required) is your personal Discord token. Easiest way to get it is to go to Developer Tools in your browser or desktop application. In Developer Tools go to the Application section, and then Storage > LocalStorage > https://discordapp.com. Find the `token` row, and your token will be the value in quotes. **It is very important to NOT SHARE this token with anyone**, as it provides complete access to your Discord account. Your token might change in the future, if this happens, you'll need to update the config file.
-
-2. `servers` (optional) is a list of servers from which to download chat history. E.g. `"servers": ["my_server"]` will only download history from that particular server. If `servers` is empty or omitted, it will download history from all servers. Be careful with this option because some servers can have gigabytes of chat history.
-
-3. `bridge_bots` (optional) is needed to prettify messages from bridge bots. E.g. you have Discord bot that proxies messages to and from some IRC server, and all messages from it look like `irc_bot: <jane> hi john`. You can transform those messages to `jane_irc: hi john`. To do that, add the following bot to the `bridge_bots`:
-```
-"irc_bot": {
-	"regex": "^<(?P<user>.*)> (?P<content>.*)$",
-	"suffix": "_irc"
-}
-```
-
-`regex` is the regular expression to extract remote username and useful message content from bot message, `suffix` is the suffix to append to remote username. Suffix `"_irc"` will transform remote username "jane" to "jane_irc", empty suffix will leave remote username as is.
-
 ## Usage
-
 ```
-$ ./main.py
+$ ./main.py -h
+usage: main.py [-h] [-s SERVER] [-c CHANNEL] [-m MAX_MESSAGES_PER_CHANNEL]
+               [--debug]
+               token
+
+Download discord chat history as (streamed) json
+
+positional arguments:
+  token                 Your discord token
+
+optional arguments:
+  -h, --help            show this help message and exit
+  -s SERVER, --server SERVER
+                        Python regex(es) matching server names to be included.
+                        If none specified, all servers will be downloaded. PMs
+                        are assigned the server name "__private".
+  -c CHANNEL, --channel CHANNEL
+                        Python regex(es) matching channel names to be
+                        included. If none specified, all channels will be
+                        downloaded.
+  -m MAX_MESSAGES_PER_CHANNEL, --max-messages-per-channel MAX_MESSAGES_PER_CHANNEL
+                        Maximum number of messages to get per channel.
+  --debug               set logging level to DEBUG
 ```
-
-It should create `logs` directory and populate it with logs.
-
-## Known problems
-
-1. The script downloads all history from a channel and only then dumps it on disk. That can be memory intensive.
-2. There's currently no way to precisely scope what channels to download chat history from, you can only list servers and it will download history from all channels on those servers.
-3. It doesn't remember what was already downloaded, so it will start from scratch every time.
-4. There's a hardcoded limit of 10 million messages per channel, would be nice to move it to config file and make it optional.
-5. Bridged bots configuration is global, so if there are two different bots with same name, one of them won't work.
-
-PRs welcome.
+For further filtering, sorting, formatting, etc. use `jq` and friends.  
+**Note**: Messages are not guaranteed to be in chronological (or really any) order.
